@@ -67,7 +67,7 @@ export default function Dashboard() {
       setSelectedRepoId(null);
     } catch (error) {
       console.error("Failed to add repository", error);
-      alert(error instanceof Error ? error.message : "Failed to add repository. Please try again.");
+      // Error toast is already handled in the hook
     } finally {
       setAddingRepoId(null);
     }
@@ -78,9 +78,10 @@ export default function Dashboard() {
       const apiKey = await createApiKey(name);
       setShowNewKey(apiKey);
       setShowCreateModal(false);
+      // Success toast is already handled in the hook
     } catch (error) {
       console.error("Failed to generate API key", error);
-      alert("Failed to generate API key. Please try again.");
+      // Error toast is already handled in the hook
     }
   };
 
@@ -89,9 +90,10 @@ export default function Dashboard() {
     try {
       await deleteApiKey(deleteKeyModal.key);
       setDeleteKeyModal(null);
+      // Success toast is already handled in the hook
     } catch (error) {
       console.error("Failed to delete API key", error);
-      alert("Failed to delete API key. Please try again.");
+      // Error toast is already handled in the hook
     }
   };
 

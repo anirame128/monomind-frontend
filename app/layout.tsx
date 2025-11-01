@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, EB_Garamond } from "next/font/google";
+import { ToasterProvider } from "./components/ToasterProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function RootLayout({
         className="font-sans antialiased"
       >
         {children}
+        <ToasterProvider />
       </body>
     </html>
     </ClerkProvider>

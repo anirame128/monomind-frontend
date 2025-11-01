@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { checkGitHubStatus, fetchRepositories, addRepository as addRepositoryApi, getGitHubAuthUrl } from '../lib/api';
 import type { GitHubRepository, IndexedCodebase } from '../lib/types';
 
 export function useGitHub(userId: string | undefined) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubError, setGithubError] = useState<string | null>(null);
   const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
@@ -15,21 +19,36 @@ export function useGitHub(userId: string | undefined) {
     if (!userId) return;
 
     // Check URL params first (for immediate feedback after OAuth)
-    const urlParams = new URLSearchParams(window.location.search);
-    const githubConnectedParam = urlParams.get('github_connected');
-    const errorParam = urlParams.get('error');
+    const githubConnectedParam = searchParams.get('github_connected');
+    const errorParam = searchParams.get('error');
+    const messageParam = searchParams.get('message');
     
-    if (errorParam === 'auth_failed') {
-      setGithubError("GitHub authentication failed. Please try again.");
+    // Handle github_already_linked error
+    if (errorParam === 'github_already_linked' && messageParam) {
+      const errorMessage = decodeURIComponent(messageParam);
+      setGithubError(errorMessage);
+      toast.error(errorMessage, { duration: 6000 });
       setGithubConnected(false);
-      window.history.replaceState({}, '', '/dashboard');
+      router.replace('/dashboard');
       return;
     }
     
+    // Handle auth_failed error
+    if (errorParam === 'auth_failed') {
+      const errorMessage = 'Failed to connect GitHub. Please try again.';
+      setGithubError(errorMessage);
+      toast.error(errorMessage);
+      setGithubConnected(false);
+      router.replace('/dashboard');
+      return;
+    }
+    
+    // Handle successful connection
     if (githubConnectedParam === 'true') {
       setGithubConnected(true);
       setGithubError(null);
-      window.history.replaceState({}, '', '/dashboard');
+      toast.success('GitHub account connected successfully!');
+      router.replace('/dashboard');
       return;
     }
 
@@ -42,7 +61,7 @@ export function useGitHub(userId: string | undefined) {
       console.error("Failed to check GitHub status", error);
       setGithubError(null);
     }
-  }, [userId]);
+  }, [userId, searchParams, router]);
 
   useEffect(() => {
     if (userId) {
@@ -63,11 +82,9 @@ export function useGitHub(userId: string | undefined) {
       setRepositories(data || []);
     } catch (error) {
       console.error("Failed to load repositories", error);
-      if (error instanceof Error) {
-        setReposError(error.message);
-      } else {
-        setReposError("Failed to load repositories. Please try again.");
-      }
+      const errorMessage = error instanceof Error ? error.message : "Failed to load repositories. Please try again.";
+      setReposError(errorMessage);
+      toast.error(errorMessage);
       setRepositories([]);
     } finally {
       setReposLoading(false);
@@ -112,12 +129,24 @@ export function useGitHub(userId: string | undefined) {
     window.location.href = getGitHubAuthUrl(userId);
   };
 
-  const addRepository = async (githubRepoId: number) => {
+  const addRepository = useCallback(async (githubRepoId: number) => {
     if (!userId) throw new Error("User ID required");
-    await addRepositoryApi(userId, githubRepoId);
-    await loadIndexedCodebases();
-    await loadRepositories();
-  };
+    try {
+      // Get repo name before adding (from current repositories list)
+      const existingRepo = repositories.find(r => r.githubId === githubRepoId);
+      const repoName = existingRepo?.fullName || 'repository';
+      
+      await addRepositoryApi(userId, githubRepoId);
+      await loadIndexedCodebases();
+      await loadRepositories();
+      
+      toast.success(`Repository ${repoName} added successfully!`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to add repository. Please try again.";
+      toast.error(errorMessage);
+      throw error;
+    }
+  }, [userId, repositories, loadIndexedCodebases, loadRepositories]);
 
   return {
     githubConnected,
