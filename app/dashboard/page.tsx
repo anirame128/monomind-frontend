@@ -21,16 +21,30 @@ export default function Dashboard() {
   const [showKeyValue, setShowKeyValue] = useState(false);
   const [deleteKeyModal, setDeleteKeyModal] = useState<ApiKey | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [githubConnected, setGithubConnected] = useState(false);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://monomind-backend-505269802392.us-central1.run.app';
 
   useEffect(() => {
     if (user) {
       loadApiKeys();
+      checkGitHubConnection();
     }
   }, [user]);
 
+  const checkGitHubConnection = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('github_connected') === 'true') {
+      setGithubConnected(true);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  };
+
+  const connectGitHub = () => {
+    window.location.href = `${apiUrl}/auth/github?user_id=${user?.id}`;
+  };
+
   const loadApiKeys = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${apiUrl}/api-keys/${user?.id}`);
       const data = await res.json();
       setApiKeys(data);
@@ -48,7 +62,6 @@ export default function Dashboard() {
     }
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${apiUrl}/api-keys/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,7 +96,6 @@ export default function Dashboard() {
     }
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       await fetch(`${apiUrl}/api-keys/${deleteKeyModal.key}`, {
         method: "DELETE",
       });
@@ -134,7 +146,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8 space-y-6">
         {/* Create Key Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -387,6 +399,43 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* GitHub Connection Card */}
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900">
+          <div className="border-b border-zinc-800 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white font-mono">GitHub Connection</h2>
+          </div>
+          <div className="px-6 py-6">
+            {githubConnected ? (
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-900/50">
+                  <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-white">GitHub Connected</p>
+                  <p className="text-sm text-zinc-400">You can now add repositories to index</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-zinc-300">
+                  Connect your GitHub account to index your repositories and enable automatic syncing.
+                </p>
+                <button
+                  onClick={connectGitHub}
+                  className="flex items-center gap-3 rounded-md bg-zinc-800 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                  </svg>
+                  Connect GitHub Account
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* API Keys Section */}
         <div className="rounded-lg border border-zinc-800 bg-zinc-900">
