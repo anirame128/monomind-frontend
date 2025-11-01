@@ -31,11 +31,22 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const checkGitHubConnection = () => {
+  const checkGitHubConnection = async () => {
+    // Check URL params first (for immediate feedback after OAuth)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('github_connected') === 'true') {
       setGithubConnected(true);
       window.history.replaceState({}, '', '/dashboard');
+      return;
+    }
+
+    // Then check actual database status
+    try {
+      const res = await fetch(`${apiUrl}/user/${user?.id}/github-status`);
+      const data = await res.json();
+      setGithubConnected(data.connected);
+    } catch (error) {
+      console.error("Failed to check GitHub status", error);
     }
   };
 
@@ -44,12 +55,24 @@ export default function Dashboard() {
   };
 
   const loadApiKeys = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const res = await fetch(`${apiUrl}/api-keys/${user?.id}`);
+      const url = `${apiUrl}/api-keys/${user?.id}`;
+      console.log('Fetching API keys from:', url);
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Failed to load API keys: ${res.status} ${res.statusText}`);
+      }
       const data = await res.json();
-      setApiKeys(data);
+      setApiKeys(data || []);
     } catch (error) {
       console.error("Failed to load API keys", error);
+      console.error("API URL:", apiUrl);
+      setApiKeys([]);
     } finally {
       setLoading(false);
     }
