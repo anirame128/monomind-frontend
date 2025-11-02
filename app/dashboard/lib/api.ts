@@ -1,6 +1,6 @@
 import type { ApiKey, GitHubRepository, IndexedCodebase } from './types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://monomind-backend-505269802392.us-central1.run.app';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function fetchApiKeys(userId: string): Promise<ApiKey[]> {
   const res = await fetch(`${API_URL}/api-keys/${userId}`);
